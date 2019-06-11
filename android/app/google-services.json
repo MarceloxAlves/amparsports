@@ -1,83 +1,45 @@
 {
   "project_info": {
-    "project_number": "842761852361",
-    "firebase_url": "https://flutterfirebaseauth-78ade.firebaseio.com",
-    "project_id": "flutterfirebaseauth-78ade",
-    "storage_bucket": "flutterfirebaseauth-78ade.appspot.com"
+    "project_number": "103769963487",
+    "firebase_url": "https://ampar-5744e.firebaseio.com",
+    "project_id": "ampar-5744e",
+    "storage_bucket": "ampar-5744e.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:842761852361:android:85987042301b412a",
+        "mobilesdk_app_id": "1:103769963487:android:553eccb8add94a00",
         "android_client_info": {
-          "package_name": "com.divyamjoshiflutter.firebase"
+          "package_name": "com.malveslin.ampar"
         }
       },
       "oauth_client": [
         {
-          "client_id": "842761852361-fuhlij3atej90ar34logd0dgheoas661.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDRcvqCoPrMi37iG7XjWW_xV7XJV4FCFmI"
-        }
-      ],
-      "services": {
-        "analytics_service": {
-          "status": 1
-        },
-        "appinvite_service": {
-          "status": 1,
-          "other_platform_oauth_client": []
-        },
-        "ads_service": {
-          "status": 2
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:842761852361:android:fa16cb1add9f08da",
-        "android_client_info": {
-          "package_name": "com.divyamjoshiflutter.flutterfirebase"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "842761852361-4dncc96uuah739vs5hlnintvecqjmaob.apps.googleusercontent.com",
+          "client_id": "103769963487-l5kilvtmqeccpcsub4g3rp1fafeusult.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.divyamjoshiflutter.flutterfirebase",
-            "certificate_hash": "508125a1a4d921196a9547f9084105dba5f67cb6"
+            "package_name": "com.malveslin.ampar",
+            "certificate_hash": "da6b5071956c3a3793099e1f8061c391baea2569"
           }
         },
         {
-          "client_id": "842761852361-fuhlij3atej90ar34logd0dgheoas661.apps.googleusercontent.com",
+          "client_id": "103769963487-c7q720uvs6n71cctvls2ssq12re0g93s.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDRcvqCoPrMi37iG7XjWW_xV7XJV4FCFmI"
+          "current_key": "AIzaSyCbJB972k5ss4AIcseFZG7OI2_PHriIbXs"
         }
       ],
       "services": {
-        "analytics_service": {
-          "status": 1
-        },
         "appinvite_service": {
-          "status": 2,
           "other_platform_oauth_client": [
             {
-              "client_id": "842761852361-fuhlij3atej90ar34logd0dgheoas661.apps.googleusercontent.com",
+              "client_id": "103769963487-c7q720uvs6n71cctvls2ssq12re0g93s.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
-        },
-        "ads_service": {
-          "status": 2
         }
       }
     }

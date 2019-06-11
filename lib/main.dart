@@ -1,23 +1,30 @@
+import 'package:amparsports/jogospage.dart';
+import 'package:amparsports/preloginpage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_firebase/homepage.dart';
-import 'package:flutter_firebase/loginpage.dart';
-import 'package:flutter_firebase/signup.dart';
-void main()=>runApp(FireAuth());
+import 'package:amparsports/homepage.dart';
+import 'package:amparsports/loginpage.dart';
+import 'package:amparsports/signup.dart';
 
-class FireAuth extends StatelessWidget{
+import 'home-visitante-page.dart';
+
+void main() => runApp(FireAuth());
+
+class FireAuth extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
     return new MaterialApp(
-      title: "Firebase Auth",
+      title: "Ampar Sports",
       debugShowCheckedModeBanner: false,
-theme: ThemeData(primarySwatch: Colors.blue),
-      home:LoginPage(),
-      routes: <String,WidgetBuilder>{
-        "/userpage":(BuildContext context)=>new Page(),
-        "/loginpage":(BuildContext context)=>new LoginPage(),
-        "/signup":(BuildContext context)=>new SignUpPage()
-
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: PreLoginPage(),
+      routes: <String, WidgetBuilder>{
+        "/prelogin": (BuildContext context) => new PreLoginPage(),
+        "/home-visitante": (BuildContext context) => new HomeVisitantePage(),
+        "/userpage": (BuildContext context) => new Page(),
+        "/loginpage": (BuildContext context) => new LoginPage(),
+        "/signup": (BuildContext context) => new SignUpPage(),
+        "/jogos": (BuildContext context) => new JogosPage()
       },
     );
   }

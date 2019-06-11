@@ -1,5 +1,5 @@
-name: flutter_firebase
-description: A new Flutter application.
+name: amparsports
+description: Uma aplicação para o gerenciamento de esportes apoiados pela AMPAR.
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -15,7 +15,8 @@ environment:
 dependencies:
   firebase_auth:
   google_sign_in:
- # cloud_firestore:
+  cloud_firestore:
+  toast: ^0.1.3
   flutter:
     sdk: flutter
 
@@ -57,6 +58,10 @@ flutter:
      - images/community.png
      - images/free.png
      - images/team.png
+     - images/ampar.gif
+     - images/app.png
+     - images/ampar.png
+     - images/ampar_name.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
