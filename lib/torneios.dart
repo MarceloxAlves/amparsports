@@ -41,7 +41,7 @@ class _MyHomePageState extends State<MyHomePage>
                     return new CustomCard(
                       title: document['tornome'],
                       description: document['torid'],
-                      torid: document.documentID,
+                      torid: document,
                       imagem: document['torlogo'],
                     );
                   }).toList(),
@@ -84,7 +84,7 @@ class CustomCard extends StatelessWidget {
         Navigator.push(
             context,
             new MaterialPageRoute(
-                builder: (context) => new JogosPage(torneioID: torid)));
+                builder: (context) => new JogosPage(torneio: torid)));
       },
     );
   }

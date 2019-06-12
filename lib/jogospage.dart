@@ -8,9 +8,9 @@ import 'package:toast/toast.dart';
 
 class JogosPage extends StatefulWidget {
 
-  final String torneioID;
+  final DocumentSnapshot torneio;
 
-  const JogosPage({Key key, this.torneioID}): super(key: key);
+  const JogosPage({Key key, this.torneio}): super(key: key);
 
 
   @override
@@ -27,7 +27,7 @@ class _JogosPageState extends State<JogosPage> {
   Widget build(BuildContext context) {
     return new Scaffold(
       key: _scaffoldKey,
-      body: JogosList(torneioID: widget.torneioID)
+      body: JogosList(torneio: widget.torneio)
     );
   }
 }
@@ -35,15 +35,16 @@ class _JogosPageState extends State<JogosPage> {
 
 
 class JogosList extends StatefulWidget {
-  final String torneioID;
+  final DocumentSnapshot torneio;
 
-  const JogosList({Key key, this.torneioID}): super(key: key);
+  const JogosList({Key key, this.torneio}): super(key: key);
 
   @override
   _JogoListState createState() => _JogoListState();
 }
 
 class _JogoListState extends State<JogosList> {
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,7 +52,9 @@ class _JogoListState extends State<JogosList> {
           child: Container(
               padding: const EdgeInsets.all(10.0),
               child: StreamBuilder<QuerySnapshot>(
-                stream: Firestore.instance.collection('torneios').document(widget.torneioID).collection('jogos').snapshots(),
+                stream: Firestore.instance.collection('torneios').document(widget.torneio.documentID).collection('jogos')
+                 .where('jogrodada', isEqualTo: widget.torneio.documentID).where('jogfases', isEqualTo: widget.torneio["jogfases"])
+                    .snapshots(),
                 builder: (BuildContext context,
                     AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.hasError)
@@ -63,7 +66,7 @@ class _JogoListState extends State<JogosList> {
                          return new CustomCard(
                            document: document,
                            idJogo: document.documentID,
-                           idTorneio: widget.torneioID,
+                           idTorneio: widget.torneio.documentID,
                          );
                        }).toList(),
                      );
