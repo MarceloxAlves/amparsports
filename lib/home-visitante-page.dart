@@ -1,14 +1,11 @@
-import 'package:amparsports/drawer.dart';
 import 'package:amparsports/pclassificacao.dart';
-import 'package:amparsports/people.dart';
 import 'package:amparsports/popup_menu.dart';
-import 'package:amparsports/ptable-jogos.dart';
-import 'package:amparsports/torneios.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:toast/toast.dart';
 
 import 'drawer-visitante.dart';
+import 'jogos-visitante-page.dart';
 
 class HomeVisitantePage extends StatefulWidget {
   @override
@@ -97,7 +94,7 @@ class _HomeVisitantePageState extends State<HomeVisitantePage>
         ),
         body: TabBarView(
           children: <Widget>[
-            PTableJogos(),
+            JogosVisitantePage(),
             PClassificacao(),
             Text("cafa"),
           ],

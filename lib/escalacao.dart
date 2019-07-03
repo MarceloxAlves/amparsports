@@ -3,171 +3,340 @@ import 'package:flutter/material.dart';
 
 class EscalacaoPage extends StatefulWidget {
   final DocumentSnapshot jogo;
+  final String time;
 
-  const EscalacaoPage({Key key, this.jogo}) : super(key: key);
+  const EscalacaoPage({Key key, this.jogo, this.time}) : super(key: key);
 
   @override
   _EscalacaoPagePageState createState() => _EscalacaoPagePageState();
 }
 
 class _EscalacaoPagePageState extends State<EscalacaoPage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   PageController _pageController = new PageController();
+  DocumentSnapshot _torneio = null;
+  DocumentSnapshot _time = null;
 
-  @override
-  Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: AppBar(
-        title: const Text('Escalações'),
-        textTheme: TextTheme(body2: TextStyle(color: Colors.black12)),
-      ),
-      body: Column(
-        children: <Widget>[
-          CustomCard(document: widget.jogo, idJogo: widget.jogo.documentID),
-          Row(
-            children: <Widget>[
-              TimeScalacaoPage(),
-              TimeScalacaoPage(),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-}
-
-class CustomCard extends StatelessWidget {
-  CustomCard({@required this.document, this.idJogo});
-
-  final document;
-  final idJogo;
-
-  @override
-  Widget build(BuildContext context) {
-    return new GestureDetector(
-      child: Card(
-          child: Container(
-              height: 150,
-              padding: const EdgeInsets.only(top: 5.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Container(
-                          padding: EdgeInsets.all(8.0),
-                          width: 100,
-                          child: Text(document["time_casa"]["nome"]),
-                        ),
-                        Container(
-                          padding: EdgeInsets.all(8.0),
-                          width: 50,
-                          child: Image.network(
-                            document["time_casa"]["escudo"],
-                            scale: 0.5,
-                          ),
-                        ),
-                        Container(
-                          width: 20,
-                          padding: EdgeInsets.all(0.0),
-                          child: Text(" X "),
-                        ),
-                        Container(
-                          padding: EdgeInsets.all(8.0),
-                          width: 50,
-                          child: Image.network(document["time_fora"]["escudo"]),
-                        ),
-                        Container(
-                          width: 100,
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(document["time_fora"]["nome"]),
-                        ),
-                      ]),
-                ],
-              ))),
-      onTap: () {},
-    );
-  }
-}
-
-class TimeScalacaoPage extends StatefulWidget {
-  @override
-  _TimeScalacaoPageState createState() => _TimeScalacaoPageState();
-}
-
-class _TimeScalacaoPageState extends State<TimeScalacaoPage>
-    with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-
-  @override
-  void initState() {
-    _controller = AnimationController(vsync: this);
+  initState() {
     super.initState();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  _getTimeRef() {
+    return Firestore.instance
+        .collection('times')
+        .where('timid', isEqualTo: this.widget.time)
+        .snapshots();
+  }
+
+  _getTorneioRef() {
+    return Firestore.instance
+        .collection('torneios')
+        .where('torid', isEqualTo: this.widget.jogo.data["jodtorneio"])
+        .snapshots();
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        ListView(
-          children: <Widget>[
-            ListTile(title: Text("adadada"),),
-            ListTile(title: Text("adadada"),)
-          ],
-        )
+        StreamBuilder<QuerySnapshot>(
+          stream: _getTimeRef(),
+          builder: (context, snap) {
+            if (snap.data == null) return CircularProgressIndicator();
+            if (snap.hasData &&
+                !snap.hasError &&
+                snap.data.documents.length > 0) {
+              _time = snap.data.documents[0];
+            }
+
+            return snap.data.documents.length > 0
+                ? CustomCard(time: _time)
+                : Text("Não POSSUI DADOS");
+          },
+        ),
+        StreamBuilder<QuerySnapshot>(
+          stream: _getTorneioRef(),
+          builder: (context, snap) {
+            if (snap.data == null)
+              return SizedBox(
+                width: 0,
+                height: 0,
+              );
+            if (snap.hasData &&
+                !snap.hasError &&
+                snap.data.documents.length > 0) {
+              _torneio = snap.data.documents[0];
+            }
+
+            return snap.data.documents.length > 0
+                ? TimeEscalacaoPage(
+                    ano:
+                        _torneio?.data["torperiodo"].toString().substring(0, 4),
+                    timid: _time?.data["timid"],
+                    torneioId: _torneio.documentID,
+                    jogoId: widget.jogo.documentID)
+                : SizedBox(
+                    width: 0,
+                    height: 0,
+                  );
+          },
+        ),
       ],
     );
   }
 }
 
+class CustomCard extends StatelessWidget {
+  CustomCard({@required this.time});
 
-class Choice {
-  const Choice({this.title, this.icon});
-
-  final String title;
-  final IconData icon;
-}
-
-const List<Choice> choices = const <Choice>[
-  const Choice(title: 'Car', icon: Icons.directions_car),
-  const Choice(title: 'Bicycle', icon: Icons.directions_bike),
-  const Choice(title: 'Boat', icon: Icons.directions_boat),
-  const Choice(title: 'Bus', icon: Icons.directions_bus),
-  const Choice(title: 'Train', icon: Icons.directions_railway),
-  const Choice(title: 'Walk', icon: Icons.directions_walk),
-];
-
-class ChoiceCard extends StatelessWidget {
-  const ChoiceCard({Key key, this.choice}) : super(key: key);
-
-  final Choice choice;
+  final DocumentSnapshot time;
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle textStyle = Theme.of(context).textTheme.display1;
     return Card(
-      color: Colors.white,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Icon(choice.icon, size: 128.0, color: textStyle.color),
-            Text(choice.title, style: textStyle),
-          ],
+        margin: EdgeInsets.all(8.0),
+        child: Container(
+            height: 140,
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Column(
+              children: <Widget>[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Container(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text("Escalação",
+                          style: TextStyle(
+                            color: Colors.black38,
+                          )),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(time.data["timusual"]),
+                      ),
+                      flex: 4,
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Center(
+                          child: Container(
+                            height: 80,
+                            child: Image.network(
+                              time.data["timescudo"].toString(),
+                              scale: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                      flex: 2,
+                    ),
+                  ],
+                ),
+              ],
+            )));
+  }
+}
+
+class TimeEscalacaoPage extends StatefulWidget {
+  final String ano;
+  final String timid;
+  final String torneioId;
+  final String jogoId;
+
+  const TimeEscalacaoPage(
+      {Key key, this.ano, this.timid, this.torneioId, this.jogoId})
+      : super(key: key);
+
+  @override
+  _TimeEscalacaoPageState createState() => _TimeEscalacaoPageState();
+}
+
+class _TimeEscalacaoPageState extends State<TimeEscalacaoPage> {
+  _getJogadores() {
+    return Firestore.instance
+        .collection('jogadores')
+        .where('jogtime', isEqualTo: this.widget.timid)
+        .where('jogano', isEqualTo: this.widget.ano)
+        .orderBy("jogusual", descending: false)
+        .snapshots();
+  }
+
+  Map<String, DocumentReference> _escalados = {};
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    _onloadEscalacao();
+    super.initState();
+  }
+
+  _onloadEscalacao(){
+    Firestore.instance
+        .collection('torneios')
+        .document(widget.torneioId)
+        .collection("jogos")
+        .document(widget.jogoId)
+        .collection("escalacoes")
+        .document("escalacao" + widget.timid)
+        .collection("jogadores")
+        .getDocuments().then((query) => {
+        query.documents.forEach( (f) {
+          _escalados.putIfAbsent(f.documentID, () => f.data["jogador"]);
+        })
+    });
+  }
+
+  _escalar(DocumentSnapshot jogador) {
+    setState(() {
+      if (_escalados.containsKey(jogador.data["jogid"].toString())) {
+        _escalados.remove(jogador.data["jogid"].toString());
+        Scaffold.of(context).showSnackBar(SnackBar(
+          content: Text(jogador.data["jogusual"] + " removido da escalação"),
+          backgroundColor: Colors.red[400],
+          duration: Duration(seconds: 1),
+        ));
+      } else {
+        _escalados.putIfAbsent(
+            jogador.data["jogid"].toString(), () => jogador.reference);
+        Scaffold.of(context).showSnackBar(SnackBar(
+          content: Text(jogador.data["jogusual"] + " escalado"),
+          backgroundColor: Colors.green[400],
+          duration: Duration(seconds: 1),
+        ));
+      }
+      print(_escalados);
+    });
+  }
+  Future _salvarEscalacao() {
+    setState(() {
+        Firestore.instance
+            .collection('torneios')
+            .document(widget.torneioId)
+            .collection("jogos")
+            .document(widget.jogoId)
+            .collection("escalacoes")
+            .document("escalacao" + widget.timid)
+            .collection("jogadores")
+            .getDocuments().then((query) => {
+              query.documents.forEach( (f) {
+                f.reference.delete();
+              })
+             })
+            .then((onValue) => {
+          _escalados.forEach((key, reference) {
+            Firestore.instance
+                .collection('torneios')
+                .document(widget.torneioId)
+                .collection("jogos")
+                .document(widget.jogoId)
+                .collection("escalacoes")
+                .document("escalacao" + widget.timid)
+                .collection("jogadores")
+                .document(key)
+                .setData({"jogador": reference});
+          })
+        });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: <Widget>[
+      Column(
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          StreamBuilder<QuerySnapshot>(
+            stream: _getJogadores(),
+            builder: (context, snap) {
+              List itens = [];
+              if (snap.data == null) return CircularProgressIndicator();
+              if (snap.hasData &&
+                  !snap.hasError &&
+                  snap.data.documents.length > 0) {
+                snap.data.documents.forEach((doc) {
+                  itens.add(doc);
+                });
+              }
+
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: itens.length > 0
+                    ? ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: itens.length,
+                        itemBuilder: (BuildContext ctxt, int index) {
+                          DocumentSnapshot jogador = itens[index];
+                          return GestureDetector(
+                            child: Card(
+                              child: Column(
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: Icon(Icons.person),
+                                          flex: 1,
+                                        ),
+                                        Expanded(
+                                            child:
+                                                Text(jogador.data["jogusual"]),
+                                            flex: 3),
+                                        Expanded(
+                                          child: _escalados.containsKey(jogador
+                                                  .data["jogid"]
+                                                  .toString())
+                                              ? Icon(
+                                                  Icons.check,
+                                                  color: Colors.green,
+                                                )
+                                              : Text(""),
+                                          flex: 1,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            onDoubleTap: () {
+                              _escalar(jogador);
+                            },
+                          );
+                          ;
+                        })
+                    : Text(
+                        "NAO POSSUI DADOS",
+                        style: TextStyle(fontSize: 10),
+                      ),
+              );
+            },
+          ),
+        ],
+      ),
+      Positioned(
+        right: 30.0,
+        bottom: 30.0,
+        child: FloatingActionButton(
+          onPressed: () async {
+            await _salvarEscalacao();
+            Scaffold.of(context).showSnackBar(SnackBar(
+              content: Text("Escalação Salva"),
+              backgroundColor: Colors.green[400],
+              duration: Duration(seconds: 1),
+            ));
+          },
+          tooltip: 'Salvar Escalação',
+          child: Icon(Icons.check_box),
+          elevation: 4.0,
         ),
       ),
-    );
+    ]);
   }
 }

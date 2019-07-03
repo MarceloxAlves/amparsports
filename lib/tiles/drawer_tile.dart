@@ -22,6 +22,11 @@ class DrawerTile extends StatelessWidget {
             if (id == "inicio"){
               Navigator.of(context).pushReplacementNamed('/userpage');
             }
+
+            if (id == "inicio_visitante"){
+              Navigator.of(context).pushReplacementNamed('/prelogin');
+            }
+
             if (id == "sair"){
                   _googleSignIn.signOut();
                 FirebaseAuth.instance.signOut().then((action) {

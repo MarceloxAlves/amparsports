@@ -1,129 +1,199 @@
-import 'package:amparsports/drawer.dart';
 import 'package:amparsports/jogodatapage.dart';
-import 'package:amparsports/popup_menu.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:toast/toast.dart';
+
+import 'model/tdata.dart';
 
 class JogosPage extends StatefulWidget {
-
   final DocumentSnapshot torneio;
+  final DocumentSnapshot delegado;
 
-  const JogosPage({Key key, this.torneio}): super(key: key);
-
+  const JogosPage({Key key, this.torneio, this.delegado}) : super(key: key);
 
   @override
   _JogosPageState createState() => _JogosPageState();
 }
 
-
 class _JogosPageState extends State<JogosPage> {
   GoogleSignIn _googleSignIn = GoogleSignIn();
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
-  PageController _pageController  = new PageController();
+  PageController _pageController = new PageController();
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
-      key: _scaffoldKey,
-      body: JogosList(torneio: widget.torneio)
-    );
+        key: _scaffoldKey, body: JogosList(torneio: widget.torneio, delegado: widget.delegado));
   }
 }
 
-
-
 class JogosList extends StatefulWidget {
   final DocumentSnapshot torneio;
+  final DocumentSnapshot delegado;
 
-  const JogosList({Key key, this.torneio}): super(key: key);
+  const JogosList({Key key, this.torneio, this.delegado}) : super(key: key);
 
   @override
   _JogoListState createState() => _JogoListState();
 }
 
 class _JogoListState extends State<JogosList> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<dynamic> _timData(String time) async {
+    DocumentSnapshot dtime;
+    await Firestore.instance
+        .collection("times")
+        .where("timid", isEqualTo: time)
+        .getDocuments()
+        .then((doc) {
+          dtime =  doc.documents.first;
+    });
+
+    return dtime;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: Center(
-          child: Container(
-              padding: const EdgeInsets.all(10.0),
-              child: StreamBuilder<QuerySnapshot>(
-                stream: Firestore.instance.collection('torneios').document(widget.torneio.documentID).collection('jogos')
-                 .where('jogrodada', isEqualTo: widget.torneio.documentID).where('jogfases', isEqualTo: widget.torneio["jogfases"])
-                    .snapshots(),
-                builder: (BuildContext context,
-                    AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (snapshot.hasError)
-                    return new Text('Error: ${snapshot.error}');
-                   if (snapshot.hasData) {
-                     return new ListView(
-                       children: snapshot.data.documents
-                           .map((DocumentSnapshot document) {
-                         return new CustomCard(
-                           document: document,
-                           idJogo: document.documentID,
-                           idTorneio: widget.torneio.documentID,
-                         );
-                       }).toList(),
-                     );
-                   }else{
-                     return new CircularProgressIndicator();
-                   }
-                },
-              )),
-        )
-    );
+      child: Container(
+          padding: const EdgeInsets.all(10.0),
+          child: StreamBuilder<QuerySnapshot>(
+            stream: Firestore.instance
+                .collection('torneios')
+                .document(widget.torneio.documentID)
+                .collection('jogos')
+                .where('jogrodada', isEqualTo: widget.torneio.data["torrodada"])
+                .where('jogfase', isEqualTo: widget.torneio.data["jogfase"])
+                .where('jogtime1', isEqualTo: widget.delegado.data["timid"])
+                .orderBy("jogdata", descending: true)
+            .limit(1)
+                .snapshots(),
+            builder:
+                (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasError)
+                return new Text('Error: ${snapshot.error}');
+              if (snapshot.hasData) {
+                return new ListView(
+                  children:
+                      snapshot.data.documents.map((DocumentSnapshot document) {
+                    return FutureBuilder(
+                        future: _timData(document.data["jogtime1"]),
+                        builder: (BuildContext context,
+                            AsyncSnapshot<dynamic> timeCasa) {
+                          return Center(
+                            child: timeCasa.hasData ?
+                             FutureBuilder(
+                                future: _timData(document.data["jogtime2"]),
+                                builder: (BuildContext context,
+                                AsyncSnapshot<dynamic> timeFora) {
+                                  return timeFora.hasData ?
+                                 new CustomCard(
+                                   document: document,
+                                   idJogo: document.documentID,
+                                   idTorneio: widget.torneio.documentID,
+                                   timecasa: timeCasa,
+                                   timefora: timeFora): new CircularProgressIndicator();
+                                }
+                            ) : new CircularProgressIndicator(),
+                          );
+                        });
+                  }).toList(),
+                );
+              } else {
+                return new CircularProgressIndicator();
+              }
+            },
+          )),
+    ));
   }
 }
 
 class CustomCard extends StatelessWidget {
-  CustomCard({@required this.document, this.idJogo, this.idTorneio});
+  CustomCard({@required this.document, this.idJogo, this.idTorneio, this.timecasa, this.timefora});
 
   final document;
   final idJogo;
   final idTorneio;
-
+  final timecasa;
+  final timefora;
 
   @override
   Widget build(BuildContext context) {
     return new GestureDetector(
       child: Card(
+          margin: EdgeInsets.all(8.0),
           child: Container(
-             height: 100,
-              padding: const EdgeInsets.only(top: 5.0),
-              child: Row(
+              height: 140,
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Column(
                 children: <Widget>[
-                  Container(
-                    padding: EdgeInsets.all(8.0),
-                    width: 100,
-                    child:  Text(document["time_casa"]["nome"]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Container(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(TDate.date_br(document["jogdata"]),
+                            style: TextStyle(
+                              color: Colors.black38,
+                            )),
+                      ),
+                    ],
                   ),
-                  Container(
-                    padding: EdgeInsets.all(8.0),
-                    width: 50,
-                    child:  Image.network(
-                       document["time_casa"]["escudo"],
-                       scale: 0.5,
-                    ),
-                  ),
-                  Container(
-                    width: 30,
-                    padding: EdgeInsets.all(0.0),
-                    child:  Text(" X "),
-                  ),
-                  Container(
-                    padding: EdgeInsets.all(8.0),
-                    width: 50,
-                    child:  Image.network(document["time_fora"]["escudo"]),
-                  ),
-                  Container(
-                    width: 100,
-                    padding: EdgeInsets.all(8.0),
-                    child:  Text(document["time_fora"]["nome"]),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(timecasa?.data["timnome"]),
+                        ),
+                        flex: 4,
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(
+                            child: Container(
+                              height: 80,
+                              child: Image.network(
+                                timecasa?.data["timescudo"] ?? "",
+                                scale: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        flex: 2,
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(" X "),
+                        ),
+                        flex: 1,
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(
+                              child: Container(
+                                  height: 80,
+                                  child: Image.network(
+                                      timefora?.data["timescudo"] ?? ""))),
+                        ),
+                        flex: 2,
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(timefora?.data["timnome"]),
+                        ),
+                        flex: 4,
+                      ),
+                    ],
                   ),
                 ],
               ))),
@@ -131,7 +201,8 @@ class CustomCard extends StatelessWidget {
         Navigator.push(
             context,
             new MaterialPageRoute(
-                builder: (context) => new JogosDataPage(jogo: document, torneio: idTorneio )));
+                builder: (context) =>
+                    new JogosDataPage(jogo: document, torneio: idTorneio)));
       },
     );
   }

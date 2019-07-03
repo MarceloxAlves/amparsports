@@ -8,7 +8,7 @@ import 'models/models.dart';
 
 class JogosDataPage extends StatefulWidget {
   final DocumentSnapshot jogo;
-  final torneio;
+  final String torneio;
 
   const JogosDataPage({Key key, this.jogo, this.torneio}) : super(key: key);
 
@@ -23,7 +23,9 @@ class _JogosDataPageState extends State<JogosDataPage> {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(key: _scaffoldKey, body: JogoData(jogo: widget.jogo, torneio: widget.torneio));
+    return new Scaffold(
+        key: _scaffoldKey,
+        body: JogoData(jogo: widget.jogo, torneio: widget.torneio));
   }
 }
 
@@ -34,31 +36,73 @@ class JogoData extends StatefulWidget {
   const JogoData({Key key, this.jogo, this.torneio}) : super(key: key);
 
   @override
-  _JogoDataState createState() => _JogoDataState(int.parse(this.jogo["jogvaltime1"].toString()), int.parse(this.jogo["jogvaltime2"].toString()));
+  _JogoDataState createState() => _JogoDataState(
+      int.parse(this.jogo["jogvaltime1"] != null
+          ? this.jogo["jogvaltime1"].toString()
+          : "0"),
+      int.parse(this.jogo["jogvaltime2"] != null
+          ? this.jogo["jogvaltime2"].toString()
+          : "0"));
 }
 
 class _JogoDataState extends State<JogoData> {
-
   String _currVal = "";
   int _qtd_gol_casa;
   int _qtd_gol_fora;
-  bool _throwShotAway =  false;
+  bool _throwShotAway = false;
+  DocumentSnapshot torneioBase;
+
+  void initState() {
+    _getTorneio();
+    super.initState();
+  }
+
+  _getTorneio() async {
+    var document = await Firestore.instance
+        .collection('torneios')
+        .where('torid', isEqualTo: this.widget.jogo.data["jodtorneio"])
+        .snapshots()
+        .first;
+    if (document.documents.length > 0) {
+      this.torneioBase = document.documents[0];
+    }
+  }
 
   _JogoDataState(this._qtd_gol_casa, this._qtd_gol_fora);
 
-  _setGol(Gol gol){
+  _setGol(Gol gol) {
     setState(() {
-      Firestore.instance.collection('torneios').document(widget.torneio).collection("jogos").document(widget.jogo.documentID).collection("gols").add(gol.toMap());
-      Firestore.instance.collection('torneios').document(widget.torneio).collection("jogos").document(widget.jogo.documentID).updateData({"jogvaltime1": _qtd_gol_casa, "jogvaltime2": _qtd_gol_fora});
+      Firestore.instance
+          .collection('torneios')
+          .document(widget.torneio)
+          .collection("jogos")
+          .document(widget.jogo.documentID)
+          .collection("gols")
+          .add(gol.toMap());
+      Firestore.instance
+          .collection('torneios')
+          .document(widget.torneio)
+          .collection("jogos")
+          .document(widget.jogo.documentID)
+          .updateData(
+              {"jogvaltime1": _qtd_gol_casa, "jogvaltime2": _qtd_gol_fora});
     });
   }
 
-  _setCard(Cartao cartao){
-    Firestore.instance.collection('torneios').document(widget.torneio)
-        .collection("jogos").document(widget.jogo.documentID)
-        .collection("cartoes").add(cartao.toMap());
+  _setCard(Cartao cartao) {
+    Firestore.instance
+        .collection('torneios')
+        .document(widget.torneio)
+        .collection("jogos")
+        .document(widget.jogo.documentID)
+        .collection("cartoes")
+        .add(cartao.toMap());
   }
 
+  Future<dynamic> userData(DocumentReference user) async {
+    DocumentSnapshot userRef = await user.get();
+    return userRef;
+  }
 
   _displayDialog(BuildContext context, String time, String op) async {
     return showDialog(
@@ -67,53 +111,65 @@ class _JogoDataState extends State<JogoData> {
           return AlertDialog(
               title: Text('Escolha o jogador | ${_currVal}'),
               content: StreamBuilder<QuerySnapshot>(
-                stream: Firestore.instance.collection('jogadores').where('jogtime', isEqualTo: time).snapshots(),
+//                stream: Firestore.instance.collection('jogadores').where('jogtime', isEqualTo: time).where('jogano',isEqualTo: this.torneioBase.data["torperiodo"].toString().substring(0,4)).orderBy("jogusual",descending: false).snapshots(),
+                stream: Firestore.instance
+                    .collection('torneios')
+                    .document(widget.torneio)
+                    .collection("jogos")
+                    .document(widget.jogo.documentID)
+                    .collection("escalacoes")
+                    .document("escalacao" + time)
+                    .collection("jogadores")
+                    .snapshots(),
                 builder: (BuildContext context,
                     AsyncSnapshot<QuerySnapshot> snapshot) {
+                  print(snapshot);
                   if (snapshot.hasError)
                     return new Text('Error: ${snapshot.error}');
                   if (snapshot.hasData) {
                     return new ListView(
                       children: snapshot.data.documents
                           .map((DocumentSnapshot document) {
-                        return new RadioListTile(
-                          title: Text("${document["jogusual"]}"),
-                          groupValue: _currVal,
-                          value: document["jogid"],
-                          onChanged: (val) {
-                            setState(() {
-                              _currVal = val;
-                              Navigator.of(context).pop();
+                       return FutureBuilder(
+                         future: userData(document.data["jogador"]),
+                         builder: (BuildContext context, AsyncSnapshot<dynamic> uData) {
+                           return  uData.hasData ? new RadioListTile(
+                             title: Text(uData.data['jogusual'] ),
+                             groupValue: _currVal,
+                             value: uData.data["jogid"],
+                             onChanged: (val) {
+                               setState(() {
+                                 _currVal = val;
+                                 Navigator.of(context).pop();
 
-                                switch (op) {
-                                  case "gol":
-                                    Gol mgol = new  Gol(val,"",time);
-                                    if (widget.jogo["jogtime1"] == time){
-                                      _qtd_gol_casa++;
-                                    }else{
-                                      _qtd_gol_fora++;
-                                    }
-                                    _setGol(mgol);
-                                    break;
-                                  case "yellow_card":
-                                    Cartao card = new  Cartao(val,"A",time);
-                                    _setCard(card);
-                                    break;
+                                 switch (op) {
+                                   case "gol":
+                                     Gol mgol = new Gol(val, "", time);
+                                     if (widget.jogo["jogtime1"] == time) {
+                                       _qtd_gol_casa++;
+                                     } else {
+                                       _qtd_gol_fora++;
+                                     }
+                                     _setGol(mgol);
+                                     break;
+                                   case "yellow_card":
+                                     Cartao card = new Cartao(val, "A", time);
+                                     _setCard(card);
+                                     break;
 
-                                  case "red_card":
-                                    Cartao card = new  Cartao(val,"V",time);
-                                    _setCard(card);
-                                    break;
-                                }
-
-
-                            });
-                          },
-
-                        );
+                                   case "red_card":
+                                     Cartao card = new Cartao(val, "V", time);
+                                     _setCard(card);
+                                     break;
+                                 }
+                               });
+                             },
+                           ): new Text('...');
+                         },
+                       );
                       }).toList(),
                     );
-                  }else{
+                  } else {
                     return new CircularProgressIndicator();
                   }
                 },
@@ -122,68 +178,25 @@ class _JogoDataState extends State<JogoData> {
                 new FlatButton(
                   child: new Text('Salvar'),
                   onPressed: () {
-                    Toast.show("Deu bom", context,
-                        duration: Toast.LENGTH_LONG);
+                    Toast.show("Deu bom", context, duration: Toast.LENGTH_LONG);
                     Navigator.of(context).pop();
                   },
                 )
               ]);
         });
   }
-
-
-  _escalacaoDialog(BuildContext context, String time, String op) async {
-    return showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-              title: Text('Escalação'),
-              content: StreamBuilder<QuerySnapshot>(
-                stream: Firestore.instance.collection('jogadores').where('jogtime', isEqualTo: time).snapshots(),
-                builder: (BuildContext context,
-                    AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (snapshot.hasError)
-                    return new Text('Error: ${snapshot.error}');
-                  if (snapshot.hasData) {
-                    return new ListView(
-                      children: snapshot.data.documents
-                          .map((DocumentSnapshot document) {
-                        return new CheckboxListTile(
-                          title: Text("${document["jogusual"]}"),
-                          value: _throwShotAway,
-                          onChanged: (val) {
-                            setState(() {
-                              _throwShotAway = val;
-                            });
-                          },
-                        );
-                      }).toList(),
-                    );
-                  }else{
-                    return new CircularProgressIndicator();
-                  }
-                },
-              ),
-              actions: <Widget>[
-                new FlatButton(
-                  child: new Text('Salvar'),
-                  onPressed: () {
-                    Toast.show("Deu bom", context,
-                        duration: Toast.LENGTH_LONG);
-                    Navigator.of(context).pop();
-                  },
-                )
-              ]);
-        });
-  }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Column(
+        body: ListView(
       children: <Widget>[
-        CustomCard(document: widget.jogo, idJogo: widget.jogo.documentID,qtd_gol_casa: _qtd_gol_casa, qtd_gol_fora: _qtd_gol_fora, ),
+        CustomCard(
+          document: widget.jogo,
+          idJogo: widget.jogo.documentID,
+          qtd_gol_casa: _qtd_gol_casa,
+          qtd_gol_fora: _qtd_gol_fora,
+        ),
         Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             mainAxisSize: MainAxisSize.max,
@@ -192,7 +205,7 @@ class _JogoDataState extends State<JogoData> {
                 const SizedBox(height: 30),
                 RaisedButton(
                   onPressed: () {
-                    _displayDialog(context,widget.jogo["jogtime1"], "gol");
+                    _displayDialog(context, widget.jogo["jogtime1"], "gol");
                   },
                   child: Column(
                     // Replace with a Row for horizontal icon + text
@@ -208,7 +221,8 @@ class _JogoDataState extends State<JogoData> {
                 const SizedBox(height: 30),
                 RaisedButton(
                   onPressed: () {
-                    _displayDialog(context,widget.jogo["jogtime1"], "yellow_card");
+                    _displayDialog(
+                        context, widget.jogo["jogtime1"], "yellow_card");
                   },
                   child: Column(
                     // Replace with a Row for horizontal icon + text
@@ -224,7 +238,8 @@ class _JogoDataState extends State<JogoData> {
                 const SizedBox(height: 30),
                 RaisedButton(
                   onPressed: () {
-                    _displayDialog(context,widget.jogo["jogtime1"], "red_card");
+                    _displayDialog(
+                        context, widget.jogo["jogtime1"], "red_card");
                   },
                   child: Column(
                     // Replace with a Row for horizontal icon + text
@@ -237,8 +252,29 @@ class _JogoDataState extends State<JogoData> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 30),
+                RaisedButton(
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        new MaterialPageRoute(
+                            builder: (context) => new EscalacaoPage(
+                                jogo: widget.jogo,
+                                time: widget.jogo["jogtime1"].toString())));
+                  },
+                  child: Column(
+                    // Replace with a Row for horizontal icon + text
+                    children: <Widget>[
+                      Icon(
+                        Icons.list,
+                        color: Colors.green,
+                      ),
+                      Text('Escalação', style: TextStyle(fontSize: 20)),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
               ]),
-
 
               // DADOS DO TIME QUE JOGA COMO VISITANTE
 
@@ -246,7 +282,7 @@ class _JogoDataState extends State<JogoData> {
                 const SizedBox(height: 30),
                 RaisedButton(
                   onPressed: () {
-                    _displayDialog(context,widget.jogo["jogtime2"], "gol");
+                    _displayDialog(context, widget.jogo["jogtime2"], "gol");
                   },
                   child: Column(
                     // Replace with a Row for horizontal icon + text
@@ -262,7 +298,8 @@ class _JogoDataState extends State<JogoData> {
                 const SizedBox(height: 30),
                 RaisedButton(
                   onPressed: () {
-                    _displayDialog(context,widget.jogo["jogtime2"], "yellow_card");
+                    _displayDialog(
+                        context, widget.jogo["jogtime2"], "yellow_card");
                   },
                   child: Column(
                     // Replace with a Row for horizontal icon + text
@@ -278,7 +315,8 @@ class _JogoDataState extends State<JogoData> {
                 const SizedBox(height: 30),
                 RaisedButton(
                   onPressed: () {
-                    _displayDialog(context,widget.jogo["jogtime2"], "red_card");
+                    _displayDialog(
+                        context, widget.jogo["jogtime2"], "red_card");
                   },
                   child: Column(
                     // Replace with a Row for horizontal icon + text
@@ -291,37 +329,42 @@ class _JogoDataState extends State<JogoData> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
+                RaisedButton(
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        new MaterialPageRoute(
+                            builder: (context) => new EscalacaoPage(
+                                jogo: widget.jogo,
+                                time: widget.jogo["jogtime2"].toString())));
+                  },
+                  child: Column(
+                    // Replace with a Row for horizontal icon + text
+                    children: <Widget>[
+                      Icon(
+                        Icons.list,
+                        color: Colors.green,
+                      ),
+                      Text('Escalação', style: TextStyle(fontSize: 20)),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
               ]),
             ]),
-        const SizedBox(height: 20),
-          RaisedButton(
-            onPressed: () {
-              Navigator.push(
-                  context,
-                  new MaterialPageRoute(
-                      builder: (context) => new EscalacaoPage(jogo: widget.jogo)));
-            },
-            child: Column(
-              // Replace with a Row for horizontal icon + text
-              children: <Widget>[
-                Icon(
-                  Icons.list,
-                  color: Colors.green,
-                ),
-                Text('Escalação', style: TextStyle(fontSize: 20)),
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
+        const SizedBox(height: 30),
       ],
     ));
   }
-
-
 }
 
 class CustomCard extends StatelessWidget {
-  CustomCard({@required this.document, this.idJogo, this.qtd_gol_casa, this.qtd_gol_fora});
+  CustomCard(
+      {@required this.document,
+      this.idJogo,
+      this.qtd_gol_casa,
+      this.qtd_gol_fora});
 
   final document;
   final idJogo;
